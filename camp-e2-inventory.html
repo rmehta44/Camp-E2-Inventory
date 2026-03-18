@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Camp E2 Inventory Tracker</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #ffffff;
+    --bg2: #f5f5f3;
+    --bg3: #efefec;
+    --text: #1a1a18;
+    --text2: #6b6b67;
+    --text3: #9b9b96;
+    --border: rgba(0,0,0,0.12);
+    --border2: rgba(0,0,0,0.22);
+    --radius: 8px;
+    --radius-lg: 12px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1c1c1a;
+      --bg2: #262624;
+      --bg3: #2e2e2c;
+      --text: #f0efe8;
+      --text2: #9b9b96;
+      --text3: #6b6b67;
+      --border: rgba(255,255,255,0.12);
+      --border2: rgba(255,255,255,0.22);
+    }
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg3);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 0;
+  }
+  header {
+    background: var(--bg);
+    border-bottom: 0.5px solid var(--border);
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  header h1 { font-size: 18px; font-weight: 600; color: var(--text); }
+  header p { font-size: 12px; color: var(--text2); margin-top: 1px; }
+  .main { max-width: 1100px; margin: 0 auto; padding: 24px 20px; }
+
+  .alert-banner {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 11px 14px; border-radius: var(--radius);
+    font-size: 13px; margin-bottom: 10px; line-height: 1.5;
+  }
+  .alert-warn { background: #FAEEDA; border: 0.5px solid #EF9F27; color: #633806; }
+  .alert-crit { background: #FCEBEB; border: 0.5px solid #E24B4A; color: #501313; }
+  .alert-icon { font-size: 15px; flex-shrink: 0; margin-top: 1px; }
+
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .stat-card {
+    background: var(--bg);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 14px 16px;
+  }
+  .stat-label { font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 6px; }
+  .stat-value { font-size: 26px; font-weight: 600; color: var(--text); }
+  .stat-value.warn { color: #BA7517; }
+  .stat-value.danger { color: #A32D2D; }
+
+  .panel {
+    background: var(--bg);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 18px 20px;
+  }
+  .panel-row {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 10px; margin-bottom: 14px;
+  }
+  .tabs { display: flex; gap: 5px; flex-wrap: wrap; }
+  .tab {
+    padding: 6px 13px; border-radius: var(--radius);
+    border: 0.5px solid var(--border);
+    background: transparent; font-size: 12px;
+    color: var(--text2); cursor: pointer; transition: all 0.12s;
+    font-family: inherit;
+  }
+  .tab:hover { background: var(--bg2); color: var(--text); }
+  .tab.active { background: var(--text); color: var(--bg); border-color: transparent; }
+
+  .controls { display: flex; gap: 8px; flex-wrap: wrap; }
+  .controls input, .controls select {
+    padding: 7px 11px;
+    border: 0.5px solid var(--border2);
+    border-radius: var(--radius);
+    font-size: 13px; font-family: inherit;
+    background: var(--bg); color: var(--text);
+    outline: none;
+  }
+  .controls input:focus, .controls select:focus { border-color: var(--text2); }
+  .controls input { width: 200px; }
+  label.check-label {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 12px; color: var(--text2); cursor: pointer;
+  }
+
+  table { width: 100%; border-collapse: collapse; }
+  thead th {
+    font-size: 11px; font-weight: 500; color: var(--text2);
+    text-align: left; padding: 8px 10px;
+    border-bottom: 0.5px solid var(--border);
+    text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  tbody td {
+    padding: 10px 10px;
+    border-bottom: 0.5px solid var(--border);
+    font-size: 13px; color: var(--text);
+    vertical-align: middle;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover td { background: var(--bg2); }
+
+  .badge {
+    display: inline-block; padding: 2px 9px;
+    border-radius: 20px; font-size: 11px; font-weight: 500;
+  }
+  .badge-ok { background: #EAF3DE; color: #3B6D11; }
+  .badge-warn { background: #FAEEDA; color: #633806; }
+  .badge-crit { background: #FCEBEB; color: #791F1F; }
+  .badge-cat {
+    background: var(--bg2); color: var(--text2);
+    font-size: 11px; padding: 2px 7px; border-radius: 10px;
+  }
+  .qty-controls { display: flex; align-items: center; gap: 6px; }
+  .qty-btn {
+    width: 26px; height: 26px; border-radius: 50%;
+    border: 0.5px solid var(--border2);
+    background: transparent; font-size: 17px;
+    cursor: pointer; display: flex; align-items: center;
+    justify-content: center; color: var(--text);
+    transition: background 0.1s; font-family: inherit; line-height: 1;
+  }
+  .qty-btn:hover { background: var(--bg2); }
+  .qty-num { font-size: 14px; font-weight: 500; min-width: 34px; text-align: center; }
+  .del-btn {
+    background: none; border: none; cursor: pointer;
+    color: var(--text3); font-size: 13px; padding: 4px 7px;
+    border-radius: 4px; font-family: inherit;
+  }
+  .del-btn:hover { color: #A32D2D; background: #FCEBEB; }
+  .notes-cell { font-size: 12px; color: var(--text2); max-width: 180px; }
+
+  .add-section {
+    border-top: 0.5px solid var(--border);
+    margin-top: 16px; padding-top: 16px;
+  }
+  .add-section h3 { font-size: 12px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 10px; font-weight: 500; }
+  .add-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .add-row input, .add-row select {
+    padding: 8px 11px;
+    border: 0.5px solid var(--border2);
+    border-radius: var(--radius);
+    font-size: 13px; font-family: inherit;
+    background: var(--bg); color: var(--text);
+    outline: none;
+  }
+  .add-row input:focus, .add-row select:focus { border-color: var(--text2); }
+  .inp-name { flex: 2; min-width: 140px; }
+  .inp-qty { width: 75px; }
+  .inp-min { width: 85px; }
+  .inp-notes { flex: 1; min-width: 120px; }
+  .btn-primary {
+    padding: 8px 18px; border-radius: var(--radius);
+    background: var(--text); color: var(--bg);
+    border: none; font-size: 13px; font-family: inherit;
+    cursor: pointer; white-space: nowrap; font-weight: 500;
+  }
+  .btn-primary:hover { opacity: 0.82; }
+
+  .empty {
+    text-align: center; color: var(--text3);
+    font-size: 14px; padding: 2.5rem 0;
+  }
+
+  @media (max-width: 640px) {
+    .summary-grid { grid-template-columns: repeat(2, 1fr); }
+    .controls input { width: 140px; }
+    thead th:nth-child(4), tbody td:nth-child(4) { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Camp E2 — Inventory Tracker</h1>
+    <p>E2 Lead Dashboard &nbsp;·&nbsp; All camp staff</p>
+  </div>
+  <div style="font-size:12px;color:var(--text2);" id="last-updated"></div>
+</header>
+
+<div class="main">
+  <div id="alerts" style="margin-bottom:4px;"></div>
+  <div class="summary-grid" id="summary"></div>
+
+  <div class="panel">
+    <div class="panel-row">
+      <div class="tabs" id="tabs"></div>
+    </div>
+    <div class="panel-row">
+      <div class="controls">
+        <input type="text" id="search" placeholder="Search items..." oninput="render()" />
+        <select id="sort" onchange="render()">
+          <option value="name">Sort: Name</option>
+          <option value="qty">Sort: Quantity</option>
+          <option value="status">Sort: Status</option>
+        </select>
+      </div>
+      <label class="check-label">
+        <input type="checkbox" id="filter-warn" onchange="render()" />
+        Low stock only
+      </label>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Item</th>
+          <th>Category</th>
+          <th>Quantity</th>
+          <th>Status</th>
+          <th>Notes</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="item-body"></tbody>
+    </table>
+    <div class="empty" id="empty-state" style="display:none;">No items found.</div>
+
+    <div class="add-section">
+      <h3>Add new item</h3>
+      <div class="add-row">
+        <input class="inp-name" type="text" id="new-name" placeholder="Item name" />
+        <select id="new-cat"></select>
+        <input class="inp-qty" type="number" id="new-qty" placeholder="Qty" min="0" value="0" />
+        <input class="inp-min" type="number" id="new-min" placeholder="Min stock" min="0" value="5" />
+        <input class="inp-notes" type="text" id="new-notes" placeholder="Notes (optional)" />
+        <button class="btn-primary" onclick="addItem()">+ Add item</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const CATEGORIES = [
+  "Pre-Camp Setup","Registration","Outreach & Recruitment",
+  "Activities","SWAG","E2 Theme","Volunteer Housing","Student Housing",
+  "Marketing & Outreach","Personnel Management","Check-in",
+  "Nurse / Medical","Bus Supplies","Vendors & Orders",
+  "Chapel / Pine","Camp Housing","Camp Set-up / Tear-down"
+];
+
+let items = [
+  { id:1,  name:"Name tags",                cat:"Check-in",         qty:120, min:50,  notes:"Lanyards included" },
+  { id:2,  name:"Sign-in sheets",           cat:"Check-in",         qty:8,   min:10,  notes:"" },
+  { id:3,  name:"Pens",                     cat:"Check-in",         qty:3,   min:15,  notes:"Need restock" },
+  { id:4,  name:"First aid kits",           cat:"Nurse / Medical",  qty:6,   min:4,   notes:"Check expiry" },
+  { id:5,  name:"Bandages (box)",           cat:"Nurse / Medical",  qty:2,   min:5,   notes:"" },
+  { id:6,  name:"Ice packs",                cat:"Nurse / Medical",  qty:20,  min:10,  notes:"" },
+  { id:7,  name:"Bus roster packets",       cat:"Bus Supplies",     qty:14,  min:10,  notes:"One per bus" },
+  { id:8,  name:"Hand sanitizer",           cat:"Bus Supplies",     qty:3,   min:8,   notes:"" },
+  { id:9,  name:"T-shirts (S)",             cat:"SWAG",             qty:45,  min:20,  notes:"" },
+  { id:10, name:"T-shirts (M)",             cat:"SWAG",             qty:12,  min:20,  notes:"Low — reorder" },
+  { id:11, name:"Medals",                   cat:"Activities",       qty:80,  min:30,  notes:"" },
+  { id:12, name:"Activity instruction sheets", cat:"Activities",    qty:5,   min:15,  notes:"Print more" },
+  { id:13, name:"Volunteer welcome packets",cat:"Volunteer Housing", qty:22, min:10,  notes:"" },
+  { id:14, name:"Flyers (stack)",           cat:"Marketing & Outreach", qty:0, min:10, notes:"Completely out" },
+  { id:15, name:"Chapel programs",          cat:"Chapel / Pine",    qty:60,  min:30,  notes:"" }
+];
+let nextId = 16;
+let activeTab = "All";
+
+function save() {
+  try { localStorage.setItem("camp_e2_items", JSON.stringify(items)); } catch(e) {}
+  document.getElementById("last-updated").textContent = "Last updated: " + new Date().toLocaleTimeString();
+}
+
+function load() {
+  try {
+    const saved = localStorage.getItem("camp_e2_items");
+    if (saved) items = JSON.parse(saved);
+  } catch(e) {}
+}
+
+function getStatus(item) {
+  if (item.qty === 0) return "critical";
+  if (item.qty < item.min) return "warn";
+  return "ok";
+}
+
+function renderSummary() {
+  const ok   = items.filter(i => getStatus(i)==="ok").length;
+  const warn = items.filter(i => getStatus(i)==="warn").length;
+  const crit = items.filter(i => getStatus(i)==="critical").length;
+  document.getElementById("summary").innerHTML = `
+    <div class="stat-card"><div class="stat-label">Total items</div><div class="stat-value">${items.length}</div></div>
+    <div class="stat-card"><div class="stat-label">In stock</div><div class="stat-value">${ok}</div></div>
+    <div class="stat-card"><div class="stat-label">Low stock</div><div class="stat-value warn">${warn}</div></div>
+    <div class="stat-card"><div class="stat-label">Out of stock</div><div class="stat-value danger">${crit}</div></div>
+  `;
+}
+
+function renderAlerts() {
+  const crit = items.filter(i => getStatus(i)==="critical");
+  const warn = items.filter(i => getStatus(i)==="warn");
+  let html = "";
+  if (crit.length) html += `<div class="alert-banner alert-crit"><span class="alert-icon">&#9888;</span><div><strong>${crit.length} item${crit.length>1?"s":""} out of stock:</strong> ${crit.map(i=>i.name).join(", ")}</div></div>`;
+  if (warn.length) html += `<div class="alert-banner alert-warn"><span class="alert-icon">&#9888;</span><div><strong>${warn.length} item${warn.length>1?"s":""} running low:</strong> ${warn.map(i=>i.name).join(", ")}</div></div>`;
+  document.getElementById("alerts").innerHTML = html;
+}
+
+function renderTabs() {
+  const usedCats = CATEGORIES.filter(c => items.some(i => i.cat === c));
+  const cats = ["All", ...usedCats];
+  if (!cats.includes(activeTab)) activeTab = "All";
+  document.getElementById("tabs").innerHTML = cats.map(c =>
+    `<button class="tab ${activeTab===c?"active":""}" onclick="setTab('${c.replace(/'/g,"&#39;")}')">${c}</button>`
+  ).join("");
+}
+
+function setTab(cat) { activeTab = cat; render(); }
+
+function populateCatSelect() {
+  const sel = document.getElementById("new-cat");
+  if (sel.options.length > 0) return;
+  CATEGORIES.forEach(c => { const o = document.createElement("option"); o.value=c; o.text=c; sel.appendChild(o); });
+}
+
+function render() {
+  renderSummary();
+  renderAlerts();
+  renderTabs();
+  populateCatSelect();
+
+  const search    = document.getElementById("search").value.toLowerCase();
+  const sort      = document.getElementById("sort").value;
+  const filterWarn = document.getElementById("filter-warn").checked;
+
+  let filtered = items.filter(i => {
+    if (activeTab !== "All" && i.cat !== activeTab) return false;
+    if (search && !i.name.toLowerCase().includes(search) && !i.cat.toLowerCase().includes(search)) return false;
+    if (filterWarn && getStatus(i)==="ok") return false;
+    return true;
+  });
+
+  if (sort==="qty")    filtered.sort((a,b) => a.qty - b.qty);
+  else if (sort==="status") filtered.sort((a,b) => { const o={critical:0,warn:1,ok:2}; return o[getStatus(a)]-o[getStatus(b)]; });
+  else filtered.sort((a,b) => a.name.localeCompare(b.name));
+
+  const tbody = document.getElementById("item-body");
+  const empty  = document.getElementById("empty-state");
+
+  if (!filtered.length) { tbody.innerHTML=""; empty.style.display="block"; return; }
+  empty.style.display = "none";
+
+  tbody.innerHTML = filtered.map(item => {
+    const s = getStatus(item);
+    const badgeCls = s==="ok"?"badge-ok":s==="warn"?"badge-warn":"badge-crit";
+    const badgeTxt = s==="ok"?"In stock":s==="warn"?"Low stock":"Out of stock";
+    const qtyColor = s==="critical"?"#A32D2D":s==="warn"?"#BA7517":"var(--text)";
+    return `<tr>
+      <td style="font-weight:500">${item.name}</td>
+      <td><span class="badge-cat">${item.cat}</span></td>
+      <td>
+        <div class="qty-controls">
+          <button class="qty-btn" onclick="changeQty(${item.id},-1)">&#8722;</button>
+          <span class="qty-num" style="color:${qtyColor}">${item.qty}</span>
+          <button class="qty-btn" onclick="changeQty(${item.id},1)">+</button>
+        </div>
+      </td>
+      <td><span class="badge ${badgeCls}">${badgeTxt}</span></td>
+      <td class="notes-cell">${item.notes||""}</td>
+      <td><button class="del-btn" onclick="deleteItem(${item.id})" title="Delete item">&#10005;</button></td>
+    </tr>`;
+  }).join("");
+}
+
+function changeQty(id, delta) {
+  const item = items.find(i => i.id===id);
+  if (!item) return;
+  item.qty = Math.max(0, item.qty + delta);
+  save(); render();
+}
+
+function addItem() {
+  const name  = document.getElementById("new-name").value.trim();
+  const cat   = document.getElementById("new-cat").value;
+  const qty   = parseInt(document.getElementById("new-qty").value)||0;
+  const min   = parseInt(document.getElementById("new-min").value)||5;
+  const notes = document.getElementById("new-notes").value.trim();
+  if (!name) { document.getElementById("new-name").focus(); return; }
+  items.push({ id: nextId++, name, cat, qty, min, notes });
+  document.getElementById("new-name").value  = "";
+  document.getElementById("new-qty").value   = "0";
+  document.getElementById("new-min").value   = "5";
+  document.getElementById("new-notes").value = "";
+  activeTab = "All";
+  save(); render();
+}
+
+function deleteItem(id) {
+  if (!confirm("Remove this item?")) return;
+  items = items.filter(i => i.id!==id);
+  save(); render();
+}
+
+load();
+render();
+document.getElementById("last-updated").textContent = "Last updated: " + new Date().toLocaleTimeString();
+</script>
+</body>
+</html>
